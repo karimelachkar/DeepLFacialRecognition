@@ -60,6 +60,9 @@ def register_face():
 
         # Extract face and create embedding
         face = face_recognition_system.extract_face(file)
+        if face is None:
+            return jsonify({'error': 'No face could be detected in the image.'}), 400
+            
         embedding = face_recognition_system.get_embedding(face)
 
         # Add to in-memory database
@@ -144,6 +147,9 @@ def recognize_face():
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
         
         face = face_recognition_system.extract_face(file)
+        if face is None:
+            return jsonify({'error': 'No face could be detected in the image.'}), 400
+
         embedding = face_recognition_system.get_embedding(face)
 
         if not face_recognition_system.id_embeddings:

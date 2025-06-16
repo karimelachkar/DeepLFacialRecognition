@@ -25,7 +25,6 @@ class FaceRecognitionSystem:
 
         # Load FaceNet model
         self.logger.info("Loading FaceNet model...")
-        from keras_facenet import FaceNet
         self.embedder = FaceNet()
         self.logger.info("FaceNet model loaded.")
         
@@ -70,7 +69,8 @@ class FaceRecognitionSystem:
         results = self.detector.detect_faces(pixels)
 
         if not results:
-            raise ValueError(f"No face detected in the image")
+            self.logger.warning("No face detected in the image")
+            return None
 
         x1, y1, width, height = results[0]['box']
         x1, y1 = abs(x1), abs(y1)
