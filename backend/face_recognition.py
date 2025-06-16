@@ -18,6 +18,11 @@ class FaceRecognitionSystem:
 
         self.threshold = 0.97
         
+        # Initialize MTCNN detector
+        self.logger.info("Loading MTCNN model...")
+        self.detector = MTCNN()
+        self.logger.info("MTCNN model loaded.")
+
         # Load FaceNet model
         self.logger.info("Loading FaceNet model...")
         from keras_facenet import FaceNet
