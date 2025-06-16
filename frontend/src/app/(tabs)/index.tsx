@@ -32,7 +32,7 @@ export default function HomeScreen() {
     setImage: React.Dispatch<React.SetStateAction<string | null>>
   ) => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,

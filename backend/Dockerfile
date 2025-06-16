@@ -22,9 +22,6 @@ RUN python -c "from keras_facenet import FaceNet; FaceNet()"
 # Copy the rest of the backend application's code into the container at /app
 COPY . .
 
-# Run the script to create embeddings before starting the server
-RUN python create_embeddings.py
-
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
 
