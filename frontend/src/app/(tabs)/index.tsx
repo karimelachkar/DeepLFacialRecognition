@@ -8,6 +8,7 @@ import {
   Text,
   ActivityIndicator,
   ScrollView,
+  TextInput,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
@@ -16,18 +17,14 @@ const RENDER_URL = "https://deeplfacialrecognition.onrender.com";
 
 export default function HomeScreen() {
   const [idImage, setIdImage] = useState<string | null>(null);
+  const [idName, setIdName] = useState("");
   const [recognizeImage, setRecognizeImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
     (async () => {
-      const cameraStatus = await Camera.requestCameraPermissionsAsync();
-      if (cameraStatus.status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Sorry, we need camera permissions to make this work!"
-        );
-      }
+      await Camera.requestCameraPermissionsAsync();
     })();
   }, []);
 
@@ -49,8 +46,8 @@ export default function HomeScreen() {
   const takePicture = async (
     setImage: React.Dispatch<React.SetStateAction<string | null>>
   ) => {
-    const cameraStatus = await Camera.getCameraPermissionsAsync();
-    if (cameraStatus.status !== "granted") {
+    const { status } = await Camera.getCameraPermissionsAsync();
+    if (status !== "granted") {
       Alert.alert("Permission needed", "Camera permission is not granted.");
       return;
     }
@@ -66,64 +63,84 @@ export default function HomeScreen() {
     }
   };
 
-  const recognizeFace = async () => {
-    if (!idImage || !recognizeImage) {
+  const handleRegister = async () => {
+    if (!idImage || !idName) {
       Alert.alert(
-        "Missing Image",
-        "Please provide both an ID image and an image to recognize."
+        "Missing Information",
+        "Please provide a name and an ID image."
       );
       return;
     }
-
     setIsLoading(true);
-
+    setFeedback("Registering...");
     const formData = new FormData();
-
-    const idUriParts = idImage.split(".");
-    const idFileType = idUriParts[idUriParts.length - 1];
-    formData.append("file1", {
+    const uriParts = idImage.split(".");
+    const fileType = uriParts[uriParts.length - 1];
+    formData.append("image", {
       uri: idImage,
-      name: `id_photo.${idFileType}`,
-      type: `image/${idFileType}`,
+      name: `photo.${fileType}`,
+      type: `image/${fileType}`,
     } as any);
-
-    const recognizeUriParts = recognizeImage.split(".");
-    const recognizeFileType = recognizeUriParts[recognizeUriParts.length - 1];
-    formData.append("file2", {
-      uri: recognizeImage,
-      name: `recognize_photo.${recognizeFileType}`,
-      type: `image/${recognizeFileType}`,
-    } as any);
+    formData.append("name", idName);
 
     try {
-      const response = await fetch(`${RENDER_URL}/verify`, {
-        // Assuming the new endpoint is /verify
+      const response = await fetch(`${RENDER_URL}/register`, {
         method: "POST",
         body: formData,
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-
       const data = await response.json();
-
       if (response.ok) {
-        Alert.alert(
-          "Recognition Result",
-          `Match: ${data.verified}\nSimilarity: ${data.similarity.toFixed(2)}%`
-        );
+        setFeedback(`Successfully registered ${data.name}!`);
+        Alert.alert("Success", `Successfully registered ${data.name}!`);
       } else {
-        Alert.alert(
-          "Recognition Failed",
-          data.error || "An unknown error occurred."
-        );
+        throw new Error(data.error || "Registration failed");
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert(
-        "Error",
-        "An error occurred while communicating with the server."
-      );
+    } catch (error: any) {
+      setFeedback(`Registration failed: ${error.message}`);
+      Alert.alert("Error", `Registration failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRecognize = async () => {
+    if (!recognizeImage) {
+      Alert.alert("Missing Image", "Please provide an image to recognize.");
+      return;
+    }
+    setIsLoading(true);
+    setFeedback("Recognizing...");
+    const formData = new FormData();
+    const uriParts = recognizeImage.split(".");
+    const fileType = uriParts[uriParts.length - 1];
+    formData.append("image", {
+      uri: recognizeImage,
+      name: `photo.${fileType}`,
+      type: `image/${fileType}`,
+    } as any);
+
+    try {
+      const response = await fetch(`${RENDER_URL}/recognize`, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const resultText = `Recognized: ${data.name || "Unknown"}`;
+        setFeedback(resultText);
+        Alert.alert("Recognition Result", resultText);
+      } else {
+        throw new Error(data.error || "Recognition failed");
+      }
+    } catch (error: any) {
+      setFeedback(`Recognition failed: ${error.message}`);
+      Alert.alert("Error", `Recognition failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -131,57 +148,72 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>One-Shot Face Recognition</Text>
+      <Text style={styles.title}>Dynamic Face Recognition</Text>
+      <Text style={styles.feedbackText}>{feedback}</Text>
 
-      <Text style={styles.sectionTitle}>ID Picture</Text>
-      <View style={styles.imageContainer}>
-        {idImage ? (
-          <Image source={{ uri: idImage }} style={styles.image} />
-        ) : (
-          <Text>No ID image selected</Text>
-        )}
-      </View>
-      <View style={styles.buttonContainer}>
-        <Button title="Upload ID" onPress={() => pickImage(setIdImage)} />
+      {/* Registration Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Step 1: Register an ID</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Name"
+          value={idName}
+          onChangeText={setIdName}
+        />
+        <View style={styles.imageContainer}>
+          {idImage ? (
+            <Image source={{ uri: idImage }} style={styles.image} />
+          ) : (
+            <Text>No ID image</Text>
+          )}
+        </View>
+        <View style={styles.buttonContainer}>
+          <Button title="Upload ID" onPress={() => pickImage(setIdImage)} />
+          <Button
+            title="Take Picture"
+            onPress={() => takePicture(setIdImage)}
+          />
+        </View>
         <Button
-          title="Take ID Picture"
-          onPress={() => takePicture(setIdImage)}
+          title="Register"
+          onPress={handleRegister}
+          disabled={isLoading || !idImage || !idName}
         />
       </View>
 
-      <Text style={styles.sectionTitle}>Image to Recognize</Text>
-      <View style={styles.imageContainer}>
-        {recognizeImage ? (
-          <Image source={{ uri: recognizeImage }} style={styles.image} />
-        ) : (
-          <Text>No image to recognize</Text>
-        )}
-      </View>
-      <View style={styles.buttonContainer}>
+      {/* Recognition Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Step 2: Recognize a Face</Text>
+        <View style={styles.imageContainer}>
+          {recognizeImage ? (
+            <Image source={{ uri: recognizeImage }} style={styles.image} />
+          ) : (
+            <Text>No image to recognize</Text>
+          )}
+        </View>
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Upload Image"
+            onPress={() => pickImage(setRecognizeImage)}
+          />
+          <Button
+            title="Take Picture"
+            onPress={() => takePicture(setRecognizeImage)}
+          />
+        </View>
         <Button
-          title="Upload Image"
-          onPress={() => pickImage(setRecognizeImage)}
-        />
-        <Button
-          title="Take Picture"
-          onPress={() => takePicture(setRecognizeImage)}
+          title="Recognize"
+          onPress={handleRecognize}
+          disabled={isLoading || !recognizeImage}
         />
       </View>
 
-      {isLoading ? (
+      {isLoading && (
         <ActivityIndicator
           size="large"
           color="#0000ff"
-          style={styles.recognizeButton}
+          style={styles.loading}
         />
-      ) : (
-        <View style={styles.recognizeButton}>
-          <Button
-            title="Recognize Face"
-            onPress={recognizeFace}
-            disabled={!idImage || !recognizeImage}
-          />
-        </View>
       )}
     </ScrollView>
   );
@@ -190,28 +222,51 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    justifyContent: "center",
     paddingVertical: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
+    marginBottom: 10,
+  },
+  feedbackText: {
+    fontSize: 16,
+    color: "blue",
     marginBottom: 20,
+    height: 20,
+  },
+  section: {
+    width: "90%",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 25,
+    alignItems: "center",
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "600",
-    marginTop: 20,
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+  input: {
+    height: 40,
+    borderColor: "gray",
+    borderWidth: 1,
+    width: "100%",
+    marginBottom: 15,
+    paddingHorizontal: 10,
+    borderRadius: 5,
   },
   imageContainer: {
-    width: 250,
-    height: 250,
+    width: 200,
+    height: 200,
     borderWidth: 1,
     borderColor: "#ccc",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 15,
+    backgroundColor: "#f0f0f0",
   },
   image: {
     width: "100%",
@@ -219,12 +274,14 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    width: "80%",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 15,
   },
-  recognizeButton: {
-    marginTop: 20,
-    width: "80%",
+  loading: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -25 }, { translateY: -25 }],
   },
 });

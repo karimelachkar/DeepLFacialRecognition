@@ -42,6 +42,42 @@ def health_check():
         'registered_faces': list(face_recognition_system.id_embeddings.keys())
     })
 
+@app.route('/register', methods=['POST'])
+def register_face():
+    """Endpoint to register a new face."""
+    try:
+        if 'image' not in request.files or 'name' not in request.form:
+            return jsonify({'error': 'Image file and name are required'}), 400
+
+        file = request.files['image']
+        name = request.form['name']
+
+        if file.filename == '' or name == '':
+            return jsonify({'error': 'Image and name cannot be empty'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Extract face and create embedding
+        face = face_recognition_system.extract_face(file)
+        embedding = face_recognition_system.get_embedding(face)
+
+        # Add to in-memory database
+        face_recognition_system.id_embeddings[name] = embedding
+        logger.info(f"Registered new face: {name}")
+
+        # Save the updated database to file
+        face_recognition_system.save_database()
+
+        return jsonify({'success': True, 'name': name, 'message': 'Face registered successfully.'})
+
+    except ValueError as ve:
+        logger.error(f"Registration error: {str(ve)}")
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Registration endpoint error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/verify', methods=['POST'])
 def verify_face():
     """One-to-one face verification endpoint"""

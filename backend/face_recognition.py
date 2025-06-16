@@ -173,3 +173,34 @@ class FaceRecognitionSystem:
             self.logger.error(f"Unexpected error loading embeddings: {e}")
             import traceback
             self.logger.error(traceback.format_exc())
+
+    def save_database(self):
+        """Save the current in-memory ID embeddings to the embeddings.json file."""
+        embeddings_file = "database/embeddings.json"
+        self.logger.info(f"Saving {len(self.id_embeddings)} embeddings to {embeddings_file}...")
+
+        # Prepare data for JSON serialization
+        embeddings_data_to_save = {}
+        for person_name, embedding_array in self.id_embeddings.items():
+            embeddings_data_to_save[person_name] = {
+                "embedding": embedding_array.tolist(),
+                "source_file": "registered_live" 
+            }
+
+        final_data = {
+            "metadata": {
+                "total_ids": len(self.id_embeddings),
+                "model": "FaceNet",
+                "normalization": "L2"
+            },
+            "embeddings": embeddings_data_to_save
+        }
+
+        try:
+            with open(embeddings_file, 'w') as f:
+                json.dump(final_data, f, indent=2)
+            self.logger.info("✅ Successfully saved embeddings file.")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ Failed to save embeddings file: {e}")
+            return False
