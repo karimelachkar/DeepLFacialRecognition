@@ -82,8 +82,8 @@ def create_embeddings_from_ids():
     
     # Check if IDs folder exists
     if not os.path.exists(ids_folder):
-        logger.error(f"IDs folder not found: {ids_folder}")
-        return False
+        logger.warning(f"IDs folder not found: {ids_folder}. Creating it.")
+        os.makedirs(ids_folder)
     
     # Create database folder if it doesn't exist
     os.makedirs("database", exist_ok=True)
@@ -95,11 +95,25 @@ def create_embeddings_from_ids():
             image_files.append(filename)
     
     logger.info(f"Found {len(image_files)} ID photos to process")
-    logger.info(f"ID files: {image_files}")
     
     if not image_files:
-        logger.error("No image files found!")
-        return False
+        logger.warning("No image files found in the IDs folder. Creating an empty embeddings file.")
+        # Create an empty embeddings.json
+        final_data = {
+            "metadata": {
+                "total_ids": 0,
+                "embedding_dimension": None,
+                "model": "FaceNet",
+                "normalization": "L2"
+            },
+            "embeddings": {}
+        }
+        with open(embeddings_file, 'w') as f:
+            json.dump(final_data, f, indent=2)
+        logger.info(f"✅ Empty embeddings file created at {embeddings_file}")
+        return True
+    
+    logger.info(f"ID files: {image_files}")
     
     # Load FaceNet model
     logger.info("Loading FaceNet model...")
