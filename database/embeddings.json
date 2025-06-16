@@ -1,0 +1,9 @@
+{
+  "metadata": {
+    "total_ids": 0,
+    "embedding_dimension": null,
+    "model": "FaceNet",
+    "normalization": "L2"
+  },
+  "embeddings": {}
+}
