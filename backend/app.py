@@ -24,9 +24,17 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('database/ids', exist_ok=True)
 
-# Initialize face recognition system
-logger.info("Initializing Face Recognition System...")
-face_recognition_system = FaceRecognitionSystem()
+# LAZY LOADING: Defer initialization of the face recognition system
+_face_recognition_system = None
+
+def get_face_recognition_system():
+    """Initializes and returns a singleton instance of the FaceRecognitionSystem."""
+    global _face_recognition_system
+    if _face_recognition_system is None:
+        logger.info("Initializing Face Recognition System for the first time...")
+        _face_recognition_system = FaceRecognitionSystem()
+        logger.info("Face Recognition System initialized.")
+    return _face_recognition_system
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -35,11 +43,12 @@ def allowed_file(filename):
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    system = get_face_recognition_system()
     return jsonify({
         'status': 'healthy',
-        'database_size': len(face_recognition_system.id_embeddings),
-        'threshold': face_recognition_system.threshold,
-        'registered_faces': list(face_recognition_system.id_embeddings.keys())
+        'database_size': len(system.id_embeddings),
+        'threshold': system.threshold,
+        'registered_faces': list(system.id_embeddings.keys())
     })
 
 @app.route('/register', methods=['POST'])
@@ -59,18 +68,19 @@ def register_face():
             return jsonify({'error': 'Invalid file type'}), 400
 
         # Extract face and create embedding
-        face = face_recognition_system.extract_face(file)
+        system = get_face_recognition_system()
+        face = system.extract_face(file)
         if face is None:
             return jsonify({'error': 'No face could be detected in the image.'}), 400
             
-        embedding = face_recognition_system.get_embedding(face)
+        embedding = system.get_embedding(face)
 
         # Add to in-memory database
-        face_recognition_system.id_embeddings[name] = embedding
+        system.id_embeddings[name] = embedding
         logger.info(f"Registered new face: {name}")
 
         # Save the updated database to file
-        face_recognition_system.save_database()
+        system.save_database()
 
         return jsonify({'success': True, 'name': name, 'message': 'Face registered successfully.'})
 
@@ -97,16 +107,17 @@ def verify_face():
         if not allowed_file(file1.filename) or not allowed_file(file2.filename):
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
 
+        system = get_face_recognition_system()
         # Process first image
-        face1 = face_recognition_system.extract_face(file1)
-        emb1 = face_recognition_system.get_embedding(face1)
+        face1 = system.extract_face(file1)
+        emb1 = system.get_embedding(face1)
 
         # Process second image
-        face2 = face_recognition_system.extract_face(file2)
-        emb2 = face_recognition_system.get_embedding(face2)
+        face2 = system.extract_face(file2)
+        emb2 = system.get_embedding(face2)
 
         # Compare embeddings
-        is_match, distance = face_recognition_system.compare_embeddings(emb1, emb2)
+        is_match, distance = system.compare_embeddings(emb1, emb2)
         
         # The distance is a measure of dissimilarity, so similarity is 1 - distance.
         # The threshold is on the distance, so a smaller distance is better.
@@ -116,7 +127,7 @@ def verify_face():
         # When distance is at the threshold, similarity is 0%.
         # Anything beyond the threshold is a non-match.
         
-        similarity_score = max(0, (face_recognition_system.threshold - distance) / face_recognition_system.threshold) * 100
+        similarity_score = max(0, (system.threshold - distance) / system.threshold) * 100
 
         return jsonify({
             'verified': bool(is_match),
@@ -146,21 +157,22 @@ def recognize_face():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
         
-        face = face_recognition_system.extract_face(file)
+        system = get_face_recognition_system()
+        face = system.extract_face(file)
         if face is None:
             return jsonify({'error': 'No face could be detected in the image.'}), 400
 
-        embedding = face_recognition_system.get_embedding(face)
+        embedding = system.get_embedding(face)
 
-        if not face_recognition_system.id_embeddings:
+        if not system.id_embeddings:
             return jsonify({'name': 'Unknown', 'distance': None, 'error': 'No IDs have been registered in the database.'})
 
         # Find the best match in the database
         best_match_name = "Unknown"
         min_distance = float('inf')
 
-        for name, id_emb in face_recognition_system.id_embeddings.items():
-            is_match, distance = face_recognition_system.compare_embeddings(embedding, id_emb)
+        for name, id_emb in system.id_embeddings.items():
+            is_match, distance = system.compare_embeddings(embedding, id_emb)
             if is_match and distance < min_distance:
                 min_distance = distance
                 best_match_name = name
@@ -180,30 +192,28 @@ def recognize_face():
 @app.route('/database', methods=['GET'])
 def get_database_info():
     """Get information about the ID database"""
+    system = get_face_recognition_system()
     return jsonify({
-        'total_ids': len(face_recognition_system.id_embeddings),
-        'id_names': list(face_recognition_system.id_embeddings.keys()),
-        'threshold': face_recognition_system.threshold
+        'total_ids': len(system.id_embeddings),
+        'id_names': list(system.id_embeddings.keys()),
+        'threshold': system.threshold
     })
 
 @app.route('/reload_database', methods=['POST'])
 def reload_database():
     """Reload the ID database"""
     try:
-        global face_recognition_system
-        face_recognition_system = FaceRecognitionSystem()
+        global _face_recognition_system
+        _face_recognition_system = FaceRecognitionSystem()
         return jsonify({
             'success': True,
-            'message': f'Database reloaded with {len(face_recognition_system.id_embeddings)} IDs'
+            'message': f'Database reloaded with {len(_face_recognition_system.id_embeddings)} IDs'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    logger.info("Starting Face Recognition API Server...")
-    logger.info(f"Database loaded with {len(face_recognition_system.id_embeddings)} IDs")
-    
-    if len(face_recognition_system.id_embeddings) == 0:
-        logger.warning("No ID embeddings found! Please add ID photos to database/ids/")
-    
+    logger.info("Starting Face Recognition API Server in debug mode...")
+    # In debug mode, we don't lazy load so that we can see initialization errors immediately.
+    get_face_recognition_system()
     app.run(host='0.0.0.0', port=5000, debug=True)
