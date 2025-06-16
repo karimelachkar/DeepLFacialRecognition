@@ -16,6 +16,9 @@ COPY requirements.txt .
 # We use --no-cache-dir to reduce the image size
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the FaceNet model to be included in the image
+RUN python -c "from keras_facenet import FaceNet; FaceNet()"
+
 # Copy the rest of the backend application's code into the container at /app
 COPY . .
 
