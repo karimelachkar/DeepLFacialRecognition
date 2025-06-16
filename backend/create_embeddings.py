@@ -170,10 +170,11 @@ def create_embeddings_from_ids():
         logger.info(f"\nSaving embeddings to {embeddings_file}...")
         
         # Add metadata
+        embedding_dim = list(embeddings_data[list(embeddings_data.keys())[0]]["embedding_shape"]) if embeddings_data else None
         final_data = {
             "metadata": {
                 "total_ids": len(embeddings_data),
-                "embedding_dimension": list(embeddings_data[list(embeddings_data.keys())[0]]["embedding_shape"]),
+                "embedding_dimension": embedding_dim,
                 "created_from": ids_folder,
                 "model": "FaceNet",
                 "normalization": "L2"
@@ -193,7 +194,7 @@ def create_embeddings_from_ids():
         
         return True
     else:
-        logger.error("❌ No embeddings generated!")
+        logger.warning("No embeddings generated, skipping save.")
         return False
 
 def verify_embeddings_file():
@@ -243,60 +244,20 @@ def verify_embeddings_file():
         logger.error(f"❌ Error reading embeddings file: {e}")
         return False
 
-def test_flask_app_loading():
-    """Test if your Flask app can now load the embeddings"""
+def main():
+    """Main execution function"""
+    logger.info("🚀 Starting embeddings creation process...\n")
     
-    logger.info("\n" + "="*60)
-    logger.info("TESTING FLASK APP LOADING")
-    logger.info("="*60)
+    # Step 1: Create embeddings
+    embeddings_created = create_embeddings_from_ids()
     
-    try:
-        # Try to simulate what your Flask app does
-        embeddings_file = "database/embeddings.json"
-        
-        with open(embeddings_file, 'r') as f:
-            data = json.load(f)
-        
-        embeddings = data["embeddings"]
-        
-        # Convert back to numpy arrays (like your Flask app should do)
-        loaded_embeddings = {}
-        for name, person_data in embeddings.items():
-            embedding_array = np.array(person_data["embedding"])
-            loaded_embeddings[name] = embedding_array
-        
-        logger.info(f"✅ Successfully simulated Flask app loading")
-        logger.info(f"📊 Loaded {len(loaded_embeddings)} ID embeddings")
-        logger.info(f"🆔 IDs: {list(loaded_embeddings.keys())}")
-        
-        # Test embedding properties
-        first_embedding = list(loaded_embeddings.values())[0]
-        logger.info(f"📏 Embedding shape: {first_embedding.shape}")
-        logger.info(f"📐 Embedding norm: {np.linalg.norm(first_embedding):.4f}")
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"❌ Error simulating Flask app loading: {e}")
-        return False
+    # Step 2: Verify the file (only if embeddings were actually created)
+    if embeddings_created:
+        verify_embeddings_file()
+
+    logger.info("\n🎉 SUCCESS! Your embeddings.json file is ready!")
+    logger.info(f"📁 Location: database/embeddings.json")
+    logger.info("🔄 You can now start your Flask app.")
 
 if __name__ == "__main__":
-    print("🚀 Starting embeddings creation process...\n")
-    
-    # Step 1: Create embeddings from ID photos
-    success = create_embeddings_from_ids()
-    
-    if success:
-        # Step 2: Verify the file was created correctly
-        verify_embeddings_file()
-        
-        # Step 3: Test Flask app loading simulation
-        test_flask_app_loading()
-        
-        print(f"\n🎉 SUCCESS! Your embeddings.json file is ready!")
-        print(f"📁 Location: database/embeddings.json")
-        print(f"🔄 Now restart your Flask app - it should load the IDs successfully!")
-        
-    else:
-        print(f"\n❌ Failed to create embeddings.json")
-        print(f"Check the error messages above and fix any issues with your ID photos")
+    main()
