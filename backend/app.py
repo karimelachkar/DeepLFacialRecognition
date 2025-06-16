@@ -132,7 +132,6 @@ def verify_face():
 def recognize_face():
     """Main face recognition endpoint"""
     try:
-        # Check if file is present
         if 'image' not in request.files:
             return jsonify({'error': 'No image file provided'}), 400
         
@@ -144,32 +143,30 @@ def recognize_face():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
         
-        try:
-            face = face_recognition_system.extract_face(file)
-            embedding = face_recognition_system.get_embedding(face)
+        face = face_recognition_system.extract_face(file)
+        embedding = face_recognition_system.get_embedding(face)
 
-            # Find the best match in the database
-            best_match_name = "Unknown"
-            min_distance = float('inf')
+        if not face_recognition_system.id_embeddings:
+            return jsonify({'name': 'Unknown', 'distance': None, 'error': 'No IDs have been registered in the database.'})
 
-            for name, id_emb in face_recognition_system.id_embeddings.items():
-                is_match, distance = face_recognition_system.compare_embeddings(embedding, id_emb)
-                if is_match and distance < min_distance:
-                    min_distance = distance
-                    best_match_name = name
+        # Find the best match in the database
+        best_match_name = "Unknown"
+        min_distance = float('inf')
 
-            return jsonify({
-                'name': best_match_name,
-                'distance': float(min_distance) if min_distance != float('inf') else None
-            })
+        for name, id_emb in face_recognition_system.id_embeddings.items():
+            is_match, distance = face_recognition_system.compare_embeddings(embedding, id_emb)
+            if is_match and distance < min_distance:
+                min_distance = distance
+                best_match_name = name
 
-        except ValueError as ve:
-            logger.error(f"Recognition error: {str(ve)}")
-            return jsonify({'error': str(ve)}), 400
-        except Exception as e:
-            logger.error(f"Recognition endpoint error: {str(e)}")
-            return jsonify({'error': str(e)}), 500
-            
+        return jsonify({
+            'name': best_match_name,
+            'distance': float(min_distance) if min_distance != float('inf') else None
+        })
+
+    except ValueError as ve:
+        logger.error(f"Recognition error: {str(ve)}")
+        return jsonify({'error': str(ve)}), 400
     except Exception as e:
         logger.error(f"Recognition endpoint error: {str(e)}")
         return jsonify({'error': str(e)}), 500
