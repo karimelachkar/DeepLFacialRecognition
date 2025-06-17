@@ -13,7 +13,8 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 
-const RENDER_URL = "https://deeplfacialrecognition.onrender.com";
+const RENDER_URL =
+  "https://deepl-facial-recognition-service-905067648084.europe-central2.run.app";
 
 export default function HomeScreen() {
   const [idImage, setIdImage] = useState<string | null>(null);
