@@ -2,45 +2,63 @@
 
 This project is a one-shot face recognition system designed for a mobile-first experience. It consists of a Python/Flask backend deployed on Google Cloud and a React Native frontend for iOS and Android.
 
-## 🚀 Quick Start: Running the Mobile App (for Presentation)
+## 🚀 Quick Start (for Presentation)
 
-These instructions will guide you through running the mobile application on your phone for a live demonstration.
+These instructions explain how to install the app directly onto an Android phone for a demonstration.
+
+**Step 1: Open the Installation Link**
+
+- On an Android phone (or emulator), open the following link in a web browser:
+- [https://expo.dev/accounts/karimelachkar/projects/frontend/builds/c4b70092-f17d-4311-a300-49747a1d48df](https://expo.dev/accounts/karimelachkar/projects/frontend/builds/c4b70092-f17d-4311-a300-49747a1d48df)
+
+**Step 2: Download and Install**
+
+- The link will open a page with a "Download" button. Tap it to download the app's installer file (`.apk`).
+- Once downloaded, open the file and follow the on-screen prompts to install the app. You may need to grant your browser permission to install apps from unknown sources.
+
+**Step 3: Use the App**
+
+- Open the "frontend" app from your phone's app drawer.
+- The app will ask you to provide two images:
+  1.  **ID Picture:** The reference photo.
+  2.  **Verification Picture:** The photo to compare against the ID.
+- The result of the comparison will be displayed on the screen.
+
+---
+
+## 💻 For Developers: Running Locally
+
+If you want to run the app in a local development environment, follow these steps.
 
 **Prerequisites:**
 
-- An iOS or Android phone
-- Wi-Fi connection (your phone and computer must be on the same network)
+- An iOS or Android phone with the **Expo Go** app installed.
+- Your computer and phone must be on the same Wi-Fi network.
 
-**Step 1: Install the Expo Go App**
-
-- On your phone, download the **Expo Go** app from the Apple App Store or Google Play Store.
-
-**Step 2: Navigate to the Frontend Directory**
+**Step 1: Navigate to the Frontend Directory**
 
 - Open a terminal on your computer and navigate to the project's `frontend` directory:
   ```bash
   cd path/to/your/project/frontend
   ```
 
-**Step 3: Install Dependencies**
+**Step 2: Install Dependencies**
 
 - If you haven't done so already, install the necessary packages.
   ```bash
   npm install
   ```
 
-**Step 4: Start the Development Server**
+**Step 3: Start the Development Server**
 
-- Run the following command to start the local server. This will generate a unique QR code in your terminal.
+- Run the following command. This will generate a unique QR code in your terminal.
   ```bash
   npm start
   ```
 
-**Step 5: Launch the App**
+**Step 4: Launch the App**
 
-- Open the **Expo Go** app on your phone and scan the QR code from your terminal. The app will automatically build and load onto your phone.
-
-You can now use the app to register a new ID and perform face recognition against the live backend service.
+- Open the **Expo Go** app on your phone and scan the QR code from your terminal. The app will automatically build and load.
 
 ---
 

@@ -10,14 +10,19 @@
     "entryPoint": "expo-router/entry",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.karimelachkar.frontend",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.karimelachkar.frontend"
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +47,18 @@
     },
     "router": {
       "root": "./src/app"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "30b87318-cbc4-4245-a548-517c7f5dbca5"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/30b87318-cbc4-4245-a548-517c7f5dbca5"
     }
   }
 }
