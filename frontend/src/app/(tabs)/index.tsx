@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   TextInput,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
@@ -33,7 +34,7 @@ export default function HomeScreen() {
     setImage: React.Dispatch<React.SetStateAction<string | null>>
   ) => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -74,25 +75,43 @@ export default function HomeScreen() {
     }
     setIsLoading(true);
     setFeedback("Registering...");
-    const formData = new FormData();
-    const uriParts = idImage.split(".");
-    const fileType = uriParts[uriParts.length - 1];
-    formData.append("image", {
-      uri: idImage,
-      name: `photo.${fileType}`,
-      type: `image/${fileType}`,
-    } as any);
-    formData.append("name", idName);
 
     try {
+      const formData = new FormData();
+      formData.append("name", idName);
+
+      // Handle image upload based on platform
+      if (Platform.OS === "web") {
+        // For web, we need to fetch the blob from the data URL
+        const response = await fetch(idImage);
+        const blob = await response.blob();
+        formData.append("image", blob, "photo.jpg");
+      } else {
+        // For native platforms
+        const imageType = idImage.endsWith("png") ? "image/png" : "image/jpeg";
+        formData.append("image", {
+          uri: Platform.OS === "ios" ? idImage.replace("file://", "") : idImage,
+          type: imageType,
+          name: "photo." + (imageType === "image/png" ? "png" : "jpg"),
+        } as any);
+      }
+
+      console.log("Sending request with FormData:", {
+        name: idName,
+        imageUri: idImage,
+      });
+
       const response = await fetch(`${RENDER_URL}/register`, {
         method: "POST",
         body: formData,
         headers: {
-          "Content-Type": "multipart/form-data",
+          Accept: "application/json",
         },
       });
+
       const data = await response.json();
+      console.log("Response:", data);
+
       if (response.ok) {
         setFeedback(`Successfully registered ${data.name}!`);
         Alert.alert("Success", `Successfully registered ${data.name}!`);
@@ -100,6 +119,7 @@ export default function HomeScreen() {
         throw new Error(data.error || "Registration failed");
       }
     } catch (error: any) {
+      console.error("Registration error:", error);
       setFeedback(`Registration failed: ${error.message}`);
       Alert.alert("Error", `Registration failed: ${error.message}`);
     } finally {
@@ -114,24 +134,44 @@ export default function HomeScreen() {
     }
     setIsLoading(true);
     setFeedback("Recognizing...");
-    const formData = new FormData();
-    const uriParts = recognizeImage.split(".");
-    const fileType = uriParts[uriParts.length - 1];
-    formData.append("image", {
-      uri: recognizeImage,
-      name: `photo.${fileType}`,
-      type: `image/${fileType}`,
-    } as any);
 
     try {
+      const formData = new FormData();
+
+      // Handle image upload based on platform
+      if (Platform.OS === "web") {
+        // For web, we need to fetch the blob from the data URL
+        const response = await fetch(recognizeImage);
+        const blob = await response.blob();
+        formData.append("image", blob, "photo.jpg");
+      } else {
+        // For native platforms
+        const imageType = recognizeImage.endsWith("png")
+          ? "image/png"
+          : "image/jpeg";
+        formData.append("image", {
+          uri:
+            Platform.OS === "ios"
+              ? recognizeImage.replace("file://", "")
+              : recognizeImage,
+          type: imageType,
+          name: "photo." + (imageType === "image/png" ? "png" : "jpg"),
+        } as any);
+      }
+
+      console.log("Sending recognition request with image");
+
       const response = await fetch(`${RENDER_URL}/recognize`, {
         method: "POST",
         body: formData,
         headers: {
-          "Content-Type": "multipart/form-data",
+          Accept: "application/json",
         },
       });
+
       const data = await response.json();
+      console.log("Recognition response:", data);
+
       if (response.ok) {
         const resultText = `Recognized: ${data.name || "Unknown"}`;
         setFeedback(resultText);
@@ -140,6 +180,7 @@ export default function HomeScreen() {
         throw new Error(data.error || "Recognition failed");
       }
     } catch (error: any) {
+      console.error("Recognition error:", error);
       setFeedback(`Recognition failed: ${error.message}`);
       Alert.alert("Error", `Recognition failed: ${error.message}`);
     } finally {
